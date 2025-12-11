@@ -33,21 +33,11 @@ function App() {
 
   // Filter tags on the client side
   const filteredTags = useMemo(() => {
-    let result = allTags
-
-    if (searchKey) {
-      result = result.filter(tag =>
-        tag.key.toLowerCase().includes(searchKey.toLowerCase())
-      )
-    }
-
-    if (searchValue) {
-      result = result.filter(tag =>
-        tag.value.toLowerCase().includes(searchValue.toLowerCase())
-      )
-    }
-
-    return result
+    return allTags.filter(tag => {
+      const matchesKey = !searchKey || tag.key.toLowerCase().includes(searchKey.toLowerCase())
+      const matchesValue = !searchValue || tag.value.toLowerCase().includes(searchValue.toLowerCase())
+      return matchesKey && matchesValue
+    })
   }, [allTags, searchKey, searchValue])
 
   useEffect(() => {
