@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import './App.css'
 import TagList from './components/TagList'
 import TagSearch from './components/TagSearch'
@@ -6,7 +6,9 @@ import { tagService } from './services/tagService'
 import type { TagInfo } from './types'
 
 function App() {
-  const [tags, setTags] = useState<TagInfo[]>([])
+  const [allTags, setAllTags] = useState<TagInfo[]>([])
+  const [searchKey, setSearchKey] = useState('')
+  const [searchValue, setSearchValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -15,7 +17,7 @@ function App() {
     setError(null)
     try {
       const data = await tagService.getAllTags()
-      setTags(data)
+      setAllTags(data)
     } catch (err) {
       setError('Error fetching tags. Make sure the backend is running and you are authenticated with Azure.')
       console.error('Error fetching tags:', err)
@@ -24,23 +26,29 @@ function App() {
     }
   }
 
-  const handleSearch = async (tagKey: string, tagValue: string) => {
-    setLoading(true)
-    setError(null)
-    try {
-      if (!tagKey && !tagValue) {
-        await fetchAllTags()
-      } else {
-        const data = await tagService.searchTags({ tagKey, tagValue })
-        setTags(data)
-      }
-    } catch (err) {
-      setError('Error searching tags. Make sure the backend is running and you are authenticated with Azure.')
-      console.error('Error searching tags:', err)
-    } finally {
-      setLoading(false)
-    }
+  const handleSearch = (tagKey: string, tagValue: string) => {
+    setSearchKey(tagKey)
+    setSearchValue(tagValue)
   }
+
+  // Filter tags on the client side
+  const filteredTags = useMemo(() => {
+    let result = allTags
+
+    if (searchKey) {
+      result = result.filter(tag =>
+        tag.key.toLowerCase().includes(searchKey.toLowerCase())
+      )
+    }
+
+    if (searchValue) {
+      result = result.filter(tag =>
+        tag.value.toLowerCase().includes(searchValue.toLowerCase())
+      )
+    }
+
+    return result
+  }, [allTags, searchKey, searchValue])
 
   useEffect(() => {
     fetchAllTags()
@@ -61,7 +69,7 @@ function App() {
 
       <div className="content">
         <TagSearch onSearch={handleSearch} loading={loading} />
-        <TagList tags={tags} loading={loading} />
+        <TagList tags={filteredTags} loading={loading} />
       </div>
     </div>
   )
