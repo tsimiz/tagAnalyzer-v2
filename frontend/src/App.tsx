@@ -1,5 +1,4 @@
-import { useState, useMemo } from 'react'
-import * as React from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import './App.css'
 import TagList from './components/TagList'
 import TagSearch from './components/TagSearch'
@@ -108,8 +107,8 @@ function App() {
     const requiredTagsLower = requiredTagsList.map(tag => tag.toLowerCase())
     
     resourceTagMap.forEach((existingTags, resourceKey) => {
-      const hasMissingTag = requiredTagsLower.some(requiredTag => !existingTags.has(requiredTag))
-      if (hasMissingTag) {
+      const isMissingAnyRequiredTag = requiredTagsLower.some(requiredTag => !existingTags.has(requiredTag))
+      if (isMissingAnyRequiredTag) {
         missingSet.add(resourceKey)
       }
     })
@@ -163,7 +162,7 @@ function App() {
   }, [allTags, searchKey, searchValue, showOnlyNull, includeResourceGroups, includeResources, includeDev, includeTest, includeStaging, includeProd])
 
   // Check connection on mount (but don't fetch tags automatically)
-  React.useEffect(() => {
+  useEffect(() => {
     checkConnection()
   }, [])
 
