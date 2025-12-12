@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
 import type { TagInfo } from '../types';
 
 interface TagListProps {
@@ -56,6 +57,42 @@ const TagList: React.FC<TagListProps> = ({ tags, loading, highlightedResources, 
     return sortDirection === 'asc' ? ' ↑' : ' ↓';
   };
 
+  const handleExportToExcel = () => {
+    // Convert the tags data to worksheet format
+    const worksheetData = sortedTags.map(tag => ({
+      'Tag Key': tag.key,
+      'Tag Value': tag.value,
+      'Resource Type': tag.resourceType,
+      'Resource Name': tag.resourceName,
+      'Resource Group': tag.resourceGroupName,
+      'Subscription': tag.subscriptionName,
+      'Subscription ID': tag.subscriptionId,
+    }));
+
+    // Create a new workbook and worksheet
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Azure Tags');
+
+    // Auto-size columns for better readability
+    const maxWidth = 50;
+    const columnWidths = Object.keys(worksheetData[0] || {}).map(key => {
+      const maxLength = Math.max(
+        key.length,
+        ...worksheetData.map(row => String(row[key as keyof typeof row] || '').length)
+      );
+      return { wch: Math.min(maxLength + 2, maxWidth) };
+    });
+    worksheet['!cols'] = columnWidths;
+
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `azure-tags-export-${timestamp}.xlsx`;
+
+    // Write the file
+    XLSX.writeFile(workbook, filename);
+  };
+
   if (loading) {
     return <div className="loading">Loading tags...</div>;
   }
@@ -66,7 +103,17 @@ const TagList: React.FC<TagListProps> = ({ tags, loading, highlightedResources, 
 
   return (
     <div className="tag-list">
-      <h2>Tags ({tags.length})</h2>
+      <div className="tag-list-header">
+        <h2>Tags ({tags.length})</h2>
+        <button 
+          className="export-button" 
+          onClick={handleExportToExcel}
+          disabled={tags.length === 0}
+          title="Export table to Excel"
+        >
+          📊 Export to Excel
+        </button>
+      </div>
       <div className="table-container">
         <table>
           <thead>
