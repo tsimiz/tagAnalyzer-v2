@@ -112,16 +112,15 @@ function App() {
     const missingSet = new Set<string>()
     const missingTagsMap = new Map<string, string[]>()
     const requiredTagsLower = requiredTagsList.map(tag => tag.toLowerCase())
+    // Create a map for efficient lookup from lowercase to original case
+    const caseMap = new Map(requiredTagsList.map(tag => [tag.toLowerCase(), tag]))
     
     resourceTagMap.forEach((existingTags, resourceKey) => {
       const missingTags = requiredTagsLower.filter(requiredTag => !existingTags.has(requiredTag))
       if (missingTags.length > 0) {
         missingSet.add(resourceKey)
-        // Store the original case version of missing tags
-        const originalCaseMissingTags = missingTags.map(lowerTag => {
-          const index = requiredTagsLower.indexOf(lowerTag)
-          return requiredTagsList[index]
-        })
+        // Store the original case version of missing tags using the case map
+        const originalCaseMissingTags = missingTags.map(lowerTag => caseMap.get(lowerTag)!)
         missingTagsMap.set(resourceKey, originalCaseMissingTags)
       }
     })

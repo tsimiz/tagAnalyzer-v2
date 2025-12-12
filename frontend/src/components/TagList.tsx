@@ -103,7 +103,7 @@ const TagList: React.FC<TagListProps> = ({ tags, loading, highlightedResources, 
               return (
                 <React.Fragment key={index}>
                   {/* Show missing tags indicator row before the first tag of each highlighted resource */}
-                  {isFirstTagForResource && isHighlighted && missingTags && missingTags.length > 0 && (
+                  {isFirstTagForResource && isHighlighted && missingTags && (
                     <tr className="missing-tags-row">
                       <td colSpan={6} className="missing-tags-cell">
                         ⚠️ Missing required tag{missingTags.length > 1 ? 's' : ''}: <strong>{missingTags.join(', ')}</strong>
