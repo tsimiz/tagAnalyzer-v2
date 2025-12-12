@@ -16,7 +16,8 @@ const TagList: React.FC<TagListProps> = ({ tags, loading }) => {
   const handleSort = (column: keyof TagInfo) => {
     if (sortColumn === column) {
       // Toggle direction if clicking the same column
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      setSortDirection(newDirection);
     } else {
       // Set new column and default to ascending
       setSortColumn(column);
@@ -32,8 +33,12 @@ const TagList: React.FC<TagListProps> = ({ tags, loading }) => {
       const bVal = b[sortColumn];
       
       // Handle null/undefined values
-      if (aVal === null || aVal === undefined) return 1;
-      if (bVal === null || bVal === undefined) return -1;
+      const aIsNull = aVal === null || aVal === undefined;
+      const bIsNull = bVal === null || bVal === undefined;
+      
+      if (aIsNull && bIsNull) return 0;
+      if (aIsNull) return sortDirection === 'asc' ? 1 : -1;
+      if (bIsNull) return sortDirection === 'asc' ? -1 : 1;
       
       const comparison = aVal.toString().localeCompare(bVal.toString());
       return sortDirection === 'asc' ? comparison : -comparison;

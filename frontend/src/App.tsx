@@ -45,7 +45,7 @@ function App() {
       const matchesValue = !searchValue || tag.value.toLowerCase().includes(searchValue.toLowerCase())
       
       // Null value filter
-      const matchesNullFilter = !showOnlyNull || !tag.value || tag.value.trim() === ''
+      const matchesNullFilter = !showOnlyNull || !tag.value || (typeof tag.value === 'string' && tag.value.trim() === '')
       
       // Resource type filter
       const isResourceGroup = tag.resourceType.toLowerCase() === 'resourcegroup'
