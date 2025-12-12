@@ -6,6 +6,23 @@ import TagFilters from './components/TagFilters'
 import { tagService } from './services/tagService'
 import type { TagInfo } from './types'
 
+// Helper function to extract environment from text
+// Uses word boundaries to avoid false positives like 'development-tools' matching 'dev'
+const extractEnvironment = (text: string): string | null => {
+  const lowerText = text.toLowerCase();
+  
+  // Check for 'dev' as a word boundary (not part of other words like 'device')
+  if (/\bdev\b/.test(lowerText) || /\bdevelopment\b/.test(lowerText)) return 'dev';
+  
+  // Check for 'test' as a word boundary (not part of words like 'protest')
+  if (/\btest\b/.test(lowerText) || /\btesting\b/.test(lowerText)) return 'test';
+  
+  // Check for 'prod' as a word boundary (not part of words like 'product')
+  if (/\bprod\b/.test(lowerText) || /\bproduction\b/.test(lowerText)) return 'prod';
+  
+  return null;
+}
+
 function App() {
   const [allTags, setAllTags] = useState<TagInfo[]>([])
   const [searchKey, setSearchKey] = useState('')
@@ -17,6 +34,9 @@ function App() {
   const [showOnlyNull, setShowOnlyNull] = useState(false)
   const [includeResourceGroups, setIncludeResourceGroups] = useState(true)
   const [includeResources, setIncludeResources] = useState(true)
+  const [includeDev, setIncludeDev] = useState(true)
+  const [includeTest, setIncludeTest] = useState(true)
+  const [includeProd, setIncludeProd] = useState(true)
 
   const fetchAllTags = async () => {
     setLoading(true)
@@ -55,9 +75,26 @@ function App() {
         (includeResourceGroups && isResourceGroup) || 
         (includeResources && !isResourceGroup)
       
-      return matchesKey && matchesValue && matchesNullFilter && matchesResourceType
+      // Environment filter
+      // First try to extract environment from resource group name, fallback to subscription name
+      const environment = extractEnvironment(tag.resourceGroupName) || extractEnvironment(tag.subscriptionName);
+      
+      // If all environments are selected or none are selected, show all
+      const allEnvironmentsSelected = includeDev && includeTest && includeProd;
+      const noEnvironmentsSelected = !includeDev && !includeTest && !includeProd;
+      
+      const matchesEnvironment = 
+        allEnvironmentsSelected || 
+        noEnvironmentsSelected ||
+        (environment === 'dev' && includeDev) ||
+        (environment === 'test' && includeTest) ||
+        (environment === 'prod' && includeProd) ||
+        // Show resources with no detected environment when all are selected or none selected
+        (environment === null && (allEnvironmentsSelected || noEnvironmentsSelected));
+      
+      return matchesKey && matchesValue && matchesNullFilter && matchesResourceType && matchesEnvironment
     })
-  }, [allTags, searchKey, searchValue, showOnlyNull, includeResourceGroups, includeResources])
+  }, [allTags, searchKey, searchValue, showOnlyNull, includeResourceGroups, includeResources, includeDev, includeTest, includeProd])
 
   useEffect(() => {
     fetchAllTags()
@@ -85,6 +122,12 @@ function App() {
           onIncludeResourceGroupsChange={setIncludeResourceGroups}
           includeResources={includeResources}
           onIncludeResourcesChange={setIncludeResources}
+          includeDev={includeDev}
+          onIncludeDevChange={setIncludeDev}
+          includeTest={includeTest}
+          onIncludeTestChange={setIncludeTest}
+          includeProd={includeProd}
+          onIncludeProdChange={setIncludeProd}
         />
         <TagList tags={filteredTags} loading={loading} />
       </div>
