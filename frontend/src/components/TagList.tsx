@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { TagInfo } from '../types';
 
 interface TagListProps {
@@ -6,7 +6,50 @@ interface TagListProps {
   loading: boolean;
 }
 
+type SortColumn = keyof TagInfo | null;
+type SortDirection = 'asc' | 'desc';
+
 const TagList: React.FC<TagListProps> = ({ tags, loading }) => {
+  const [sortColumn, setSortColumn] = useState<SortColumn>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (column: keyof TagInfo) => {
+    if (sortColumn === column) {
+      // Toggle direction if clicking the same column
+      const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      setSortDirection(newDirection);
+    } else {
+      // Set new column and default to ascending
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedTags = React.useMemo(() => {
+    if (!sortColumn) return tags;
+
+    return [...tags].sort((a, b) => {
+      const aVal = a[sortColumn];
+      const bVal = b[sortColumn];
+      
+      // Handle null/undefined values
+      const aIsNull = aVal === null || aVal === undefined;
+      const bIsNull = bVal === null || bVal === undefined;
+      
+      if (aIsNull && bIsNull) return 0;
+      if (aIsNull) return sortDirection === 'asc' ? 1 : -1;
+      if (bIsNull) return sortDirection === 'asc' ? -1 : 1;
+      
+      const comparison = aVal.toString().localeCompare(bVal.toString());
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [tags, sortColumn, sortDirection]);
+
+  const getSortIndicator = (column: keyof TagInfo) => {
+    if (sortColumn !== column) return ' ↕';
+    return sortDirection === 'asc' ? ' ↑' : ' ↓';
+  };
+
   if (loading) {
     return <div className="loading">Loading tags...</div>;
   }
@@ -22,16 +65,28 @@ const TagList: React.FC<TagListProps> = ({ tags, loading }) => {
         <table>
           <thead>
             <tr>
-              <th>Tag Key</th>
-              <th>Tag Value</th>
-              <th>Resource Type</th>
-              <th>Resource Name</th>
-              <th>Resource Group</th>
-              <th>Subscription</th>
+              <th onClick={() => handleSort('key')} className="sortable">
+                Tag Key{getSortIndicator('key')}
+              </th>
+              <th onClick={() => handleSort('value')} className="sortable">
+                Tag Value{getSortIndicator('value')}
+              </th>
+              <th onClick={() => handleSort('resourceType')} className="sortable">
+                Resource Type{getSortIndicator('resourceType')}
+              </th>
+              <th onClick={() => handleSort('resourceName')} className="sortable">
+                Resource Name{getSortIndicator('resourceName')}
+              </th>
+              <th onClick={() => handleSort('resourceGroupName')} className="sortable">
+                Resource Group{getSortIndicator('resourceGroupName')}
+              </th>
+              <th onClick={() => handleSort('subscriptionName')} className="sortable">
+                Subscription{getSortIndicator('subscriptionName')}
+              </th>
             </tr>
           </thead>
           <tbody>
-            {tags.map((tag, index) => (
+            {sortedTags.map((tag, index) => (
               <tr key={index}>
                 <td>{tag.key}</td>
                 <td>{tag.value}</td>

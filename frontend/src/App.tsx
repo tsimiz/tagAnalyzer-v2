@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import './App.css'
 import TagList from './components/TagList'
 import TagSearch from './components/TagSearch'
+import TagFilters from './components/TagFilters'
 import { tagService } from './services/tagService'
 import type { TagInfo } from './types'
 
@@ -11,6 +12,11 @@ function App() {
   const [searchValue, setSearchValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Filter states
+  const [showOnlyNull, setShowOnlyNull] = useState(false)
+  const [includeResourceGroups, setIncludeResourceGroups] = useState(true)
+  const [includeResources, setIncludeResources] = useState(true)
 
   const fetchAllTags = async () => {
     setLoading(true)
@@ -34,11 +40,24 @@ function App() {
   // Filter tags on the client side
   const filteredTags = useMemo(() => {
     return allTags.filter(tag => {
+      // Search filters
       const matchesKey = !searchKey || tag.key.toLowerCase().includes(searchKey.toLowerCase())
       const matchesValue = !searchValue || tag.value.toLowerCase().includes(searchValue.toLowerCase())
-      return matchesKey && matchesValue
+      
+      // Null value filter
+      const matchesNullFilter = !showOnlyNull || !tag.value || (typeof tag.value === 'string' && tag.value.trim() === '')
+      
+      // Resource type filter
+      const isResourceGroup = tag.resourceType.toLowerCase() === 'resourcegroup'
+      const matchesResourceType = 
+        (includeResourceGroups && includeResources) || // Show all when both are checked
+        (!includeResourceGroups && !includeResources) || // Show all when none are checked
+        (includeResourceGroups && isResourceGroup) || 
+        (includeResources && !isResourceGroup)
+      
+      return matchesKey && matchesValue && matchesNullFilter && matchesResourceType
     })
-  }, [allTags, searchKey, searchValue])
+  }, [allTags, searchKey, searchValue, showOnlyNull, includeResourceGroups, includeResources])
 
   useEffect(() => {
     fetchAllTags()
@@ -59,6 +78,14 @@ function App() {
 
       <div className="content">
         <TagSearch onSearch={handleSearch} loading={loading} />
+        <TagFilters
+          showOnlyNull={showOnlyNull}
+          onShowOnlyNullChange={setShowOnlyNull}
+          includeResourceGroups={includeResourceGroups}
+          onIncludeResourceGroupsChange={setIncludeResourceGroups}
+          includeResources={includeResources}
+          onIncludeResourcesChange={setIncludeResources}
+        />
         <TagList tags={filteredTags} loading={loading} />
       </div>
     </div>
