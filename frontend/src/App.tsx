@@ -7,11 +7,19 @@ import { tagService } from './services/tagService'
 import type { TagInfo } from './types'
 
 // Helper function to extract environment from text
+// Uses word boundaries to avoid false positives like 'development-tools' matching 'dev'
 const extractEnvironment = (text: string): string | null => {
   const lowerText = text.toLowerCase();
-  if (lowerText.includes('dev')) return 'dev';
-  if (lowerText.includes('test')) return 'test';
-  if (lowerText.includes('prod')) return 'prod';
+  
+  // Check for 'dev' as a word boundary (not part of other words like 'device')
+  if (/\bdev\b/.test(lowerText) || /\bdevelopment\b/.test(lowerText)) return 'dev';
+  
+  // Check for 'test' as a word boundary (not part of words like 'protest')
+  if (/\btest\b/.test(lowerText) || /\btesting\b/.test(lowerText)) return 'test';
+  
+  // Check for 'prod' as a word boundary (not part of words like 'product')
+  if (/\bprod\b/.test(lowerText) || /\bproduction\b/.test(lowerText)) return 'prod';
+  
   return null;
 }
 
@@ -81,7 +89,8 @@ function App() {
         (environment === 'dev' && includeDev) ||
         (environment === 'test' && includeTest) ||
         (environment === 'prod' && includeProd) ||
-        (environment === null); // Show resources with no detected environment
+        // Show resources with no detected environment when all are selected or none selected
+        (environment === null && (allEnvironmentsSelected || noEnvironmentsSelected));
       
       return matchesKey && matchesValue && matchesNullFilter && matchesResourceType && matchesEnvironment
     })
