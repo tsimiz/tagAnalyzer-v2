@@ -11,6 +11,8 @@ interface TagFiltersProps {
   onIncludeDevChange: (value: boolean) => void;
   includeTest: boolean;
   onIncludeTestChange: (value: boolean) => void;
+  includeStaging: boolean;
+  onIncludeStagingChange: (value: boolean) => void;
   includeProd: boolean;
   onIncludeProdChange: (value: boolean) => void;
 }
@@ -26,6 +28,8 @@ const TagFilters: React.FC<TagFiltersProps> = ({
   onIncludeDevChange,
   includeTest,
   onIncludeTestChange,
+  includeStaging,
+  onIncludeStagingChange,
   includeProd,
   onIncludeProdChange,
 }) => {
@@ -88,6 +92,16 @@ const TagFilters: React.FC<TagFiltersProps> = ({
                 onChange={(e) => onIncludeTestChange(e.target.checked)}
               />
               <span>Include Test</span>
+            </label>
+          </div>
+          <div className="filter-item">
+            <label>
+              <input
+                type="checkbox"
+                checked={includeStaging}
+                onChange={(e) => onIncludeStagingChange(e.target.checked)}
+              />
+              <span>Include Staging (stg)</span>
             </label>
           </div>
           <div className="filter-item">
