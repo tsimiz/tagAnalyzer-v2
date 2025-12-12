@@ -4,14 +4,19 @@ import type { TagInfo } from '../types';
 interface TagListProps {
   tags: TagInfo[];
   loading: boolean;
+  highlightedResources?: Set<string>;
 }
 
 type SortColumn = keyof TagInfo | null;
 type SortDirection = 'asc' | 'desc';
 
-const TagList: React.FC<TagListProps> = ({ tags, loading }) => {
+const TagList: React.FC<TagListProps> = ({ tags, loading, highlightedResources }) => {
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const getResourceKey = (tag: TagInfo): string => {
+    return `${tag.subscriptionId}|${tag.resourceGroupName}|${tag.resourceName}|${tag.resourceType}`;
+  };
 
   const handleSort = (column: keyof TagInfo) => {
     if (sortColumn === column) {
@@ -86,16 +91,20 @@ const TagList: React.FC<TagListProps> = ({ tags, loading }) => {
             </tr>
           </thead>
           <tbody>
-            {sortedTags.map((tag, index) => (
-              <tr key={index}>
-                <td>{tag.key}</td>
-                <td>{tag.value}</td>
-                <td>{tag.resourceType}</td>
-                <td>{tag.resourceName}</td>
-                <td>{tag.resourceGroupName}</td>
-                <td>{tag.subscriptionName}</td>
-              </tr>
-            ))}
+            {sortedTags.map((tag, index) => {
+              const resourceKey = getResourceKey(tag);
+              const isHighlighted = highlightedResources && highlightedResources.has(resourceKey);
+              return (
+                <tr key={index} className={isHighlighted ? 'highlighted-row' : ''}>
+                  <td>{tag.key}</td>
+                  <td>{tag.value}</td>
+                  <td>{tag.resourceType}</td>
+                  <td>{tag.resourceName}</td>
+                  <td>{tag.resourceGroupName}</td>
+                  <td>{tag.subscriptionName}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
