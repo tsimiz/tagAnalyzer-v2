@@ -5,12 +5,13 @@ interface TagListProps {
   tags: TagInfo[];
   loading: boolean;
   highlightedResources?: Set<string>;
+  missingTagsMap?: Map<string, string[]>;
 }
 
 type SortColumn = keyof TagInfo | null;
 type SortDirection = 'asc' | 'desc';
 
-const TagList: React.FC<TagListProps> = ({ tags, loading, highlightedResources }) => {
+const TagList: React.FC<TagListProps> = ({ tags, loading, highlightedResources, missingTagsMap }) => {
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -94,15 +95,30 @@ const TagList: React.FC<TagListProps> = ({ tags, loading, highlightedResources }
             {sortedTags.map((tag, index) => {
               const resourceKey = getResourceKey(tag);
               const isHighlighted = highlightedResources && highlightedResources.has(resourceKey);
+              const missingTags = missingTagsMap && missingTagsMap.get(resourceKey);
+              
+              // Check if this is the first tag for this resource
+              const isFirstTagForResource = index === 0 || getResourceKey(sortedTags[index - 1]) !== resourceKey;
+              
               return (
-                <tr key={index} className={isHighlighted ? 'highlighted-row' : ''}>
-                  <td>{tag.key}</td>
-                  <td>{tag.value}</td>
-                  <td>{tag.resourceType}</td>
-                  <td>{tag.resourceName}</td>
-                  <td>{tag.resourceGroupName}</td>
-                  <td>{tag.subscriptionName}</td>
-                </tr>
+                <React.Fragment key={index}>
+                  {/* Show missing tags indicator row before the first tag of each highlighted resource */}
+                  {isFirstTagForResource && isHighlighted && missingTags && (
+                    <tr className="missing-tags-row">
+                      <td colSpan={6} className="missing-tags-cell">
+                        ⚠️ Missing required tag{missingTags.length > 1 ? 's' : ''}: <strong>{missingTags.join(', ')}</strong>
+                      </td>
+                    </tr>
+                  )}
+                  <tr className={isHighlighted ? 'highlighted-row' : ''}>
+                    <td>{tag.key}</td>
+                    <td>{tag.value}</td>
+                    <td>{tag.resourceType}</td>
+                    <td>{tag.resourceName}</td>
+                    <td>{tag.resourceGroupName}</td>
+                    <td>{tag.subscriptionName}</td>
+                  </tr>
+                </React.Fragment>
               );
             })}
           </tbody>

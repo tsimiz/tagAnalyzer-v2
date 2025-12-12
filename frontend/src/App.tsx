@@ -36,6 +36,8 @@ function App() {
   const [isConnected, setIsConnected] = useState(false)
   const [isCheckingConnection, setIsCheckingConnection] = useState(true)
   const [highlightedResources, setHighlightedResources] = useState<Set<string>>(new Set())
+  const [missingTagsMap, setMissingTagsMap] = useState<Map<string, string[]>>(new Map())
+  const [requiredTagsList, setRequiredTagsList] = useState<string[]>([])
   
   // Filter states
   const [showOnlyNull, setShowOnlyNull] = useState(false)
@@ -69,17 +71,21 @@ function App() {
       setIsConnected(true)
       
       // Parse required tags
-      const requiredTagsList = requiredTagsInput
+      const parsedRequiredTags = requiredTagsInput
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0)
       
+      setRequiredTagsList(parsedRequiredTags)
+      
       // If required tags are specified, identify resources missing those tags
-      if (requiredTagsList.length > 0) {
-        const highlighted = findResourcesMissingTags(data, requiredTagsList)
+      if (parsedRequiredTags.length > 0) {
+        const { highlighted, missingTags } = findResourcesMissingTags(data, parsedRequiredTags)
         setHighlightedResources(highlighted)
+        setMissingTagsMap(missingTags)
       } else {
         setHighlightedResources(new Set())
+        setMissingTagsMap(new Map())
       }
     } catch (err) {
       setError('Error fetching tags. Make sure the backend is running and you are authenticated with Azure.')
@@ -90,7 +96,7 @@ function App() {
     }
   }
 
-  const findResourcesMissingTags = (tags: TagInfo[], requiredTagsList: string[]): Set<string> => {
+  const findResourcesMissingTags = (tags: TagInfo[], requiredTagsList: string[]): { highlighted: Set<string>, missingTags: Map<string, string[]> } => {
     // Group tags by resource
     const resourceTagMap = new Map<string, Set<string>>()
     
@@ -104,16 +110,22 @@ function App() {
     
     // Find resources missing any of the required tags
     const missingSet = new Set<string>()
+    const missingTagsMap = new Map<string, string[]>()
     const requiredTagsLower = requiredTagsList.map(tag => tag.toLowerCase())
+    // Create a map for efficient lookup from lowercase to original case
+    const caseMap = new Map(requiredTagsList.map(tag => [tag.toLowerCase(), tag]))
     
     resourceTagMap.forEach((existingTags, resourceKey) => {
-      const isMissingAnyRequiredTag = requiredTagsLower.some(requiredTag => !existingTags.has(requiredTag))
-      if (isMissingAnyRequiredTag) {
+      const missingTags = requiredTagsLower.filter(requiredTag => !existingTags.has(requiredTag))
+      if (missingTags.length > 0) {
         missingSet.add(resourceKey)
+        // Store the original case version of missing tags using the case map
+        const originalCaseMissingTags = missingTags.map(lowerTag => caseMap.get(lowerTag)!)
+        missingTagsMap.set(resourceKey, originalCaseMissingTags)
       }
     })
     
-    return missingSet
+    return { highlighted: missingSet, missingTags: missingTagsMap }
   }
 
   const handleSearch = (tagKey: string, tagValue: string) => {
@@ -157,9 +169,13 @@ function App() {
         // Show resources with no detected environment when all are selected or none selected
         (environment === null && (allEnvironmentsSelected || noEnvironmentsSelected));
       
-      return matchesKey && matchesValue && matchesNullFilter && matchesResourceType && matchesEnvironment
+      // Filter by required tags: only show tags from resources that are missing required tags
+      const resourceKey = `${tag.subscriptionId}|${tag.resourceGroupName}|${tag.resourceName}|${tag.resourceType}`
+      const matchesRequiredTagsFilter = requiredTagsList.length === 0 || highlightedResources.has(resourceKey)
+      
+      return matchesKey && matchesValue && matchesNullFilter && matchesResourceType && matchesEnvironment && matchesRequiredTagsFilter
     })
-  }, [allTags, searchKey, searchValue, showOnlyNull, includeResourceGroups, includeResources, includeDev, includeTest, includeStaging, includeProd])
+  }, [allTags, searchKey, searchValue, showOnlyNull, includeResourceGroups, includeResources, includeDev, includeTest, includeStaging, includeProd, requiredTagsList, highlightedResources])
 
   // Check connection on mount (but don't fetch tags automatically)
   useEffect(() => {
@@ -206,6 +222,7 @@ function App() {
           tags={filteredTags} 
           loading={loading} 
           highlightedResources={highlightedResources}
+          missingTagsMap={missingTagsMap}
         />
       </div>
     </div>
