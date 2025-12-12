@@ -58,6 +58,9 @@ const TagList: React.FC<TagListProps> = ({ tags, loading, highlightedResources, 
   };
 
   const handleExportToExcel = () => {
+    // Guard against empty data
+    if (sortedTags.length === 0) return;
+
     // Convert the tags data to worksheet format
     const worksheetData = sortedTags.map(tag => ({
       'Tag Key': tag.key,
@@ -76,7 +79,7 @@ const TagList: React.FC<TagListProps> = ({ tags, loading, highlightedResources, 
 
     // Auto-size columns for better readability
     const maxWidth = 50;
-    const columnWidths = Object.keys(worksheetData[0] || {}).map(key => {
+    const columnWidths = Object.keys(worksheetData[0]).map(key => {
       const maxLength = Math.max(
         key.length,
         ...worksheetData.map(row => String(row[key as keyof typeof row] || '').length)
