@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import './App.css'
 import TagList from './components/TagList'
 import TagSearch from './components/TagSearch'
 import TagFilters from './components/TagFilters'
+import ConnectionStatus from './components/ConnectionStatus'
 import { tagService } from './services/tagService'
 import type { TagInfo } from './types'
 
@@ -32,6 +33,9 @@ function App() {
   const [searchValue, setSearchValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true)
+  const [highlightedResources, setHighlightedResources] = useState<Set<string>>(new Set())
   
   // Filter states
   const [showOnlyNull, setShowOnlyNull] = useState(false)
@@ -42,18 +46,74 @@ function App() {
   const [includeStaging, setIncludeStaging] = useState(true)
   const [includeProd, setIncludeProd] = useState(true)
 
-  const fetchAllTags = async () => {
+  // Check Azure connection status
+  const checkConnection = async () => {
+    setIsCheckingConnection(true)
+    try {
+      await tagService.getSubscriptions()
+      setIsConnected(true)
+    } catch (err) {
+      setIsConnected(false)
+      console.error('Connection check failed:', err)
+    } finally {
+      setIsCheckingConnection(false)
+    }
+  }
+
+  const fetchAllTags = async (requiredTagsInput: string) => {
     setLoading(true)
     setError(null)
     try {
       const data = await tagService.getAllTags()
       setAllTags(data)
+      setIsConnected(true)
+      
+      // Parse required tags
+      const requiredTagsList = requiredTagsInput
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0)
+      
+      // If required tags are specified, identify resources missing those tags
+      if (requiredTagsList.length > 0) {
+        const highlighted = findResourcesMissingTags(data, requiredTagsList)
+        setHighlightedResources(highlighted)
+      } else {
+        setHighlightedResources(new Set())
+      }
     } catch (err) {
       setError('Error fetching tags. Make sure the backend is running and you are authenticated with Azure.')
+      setIsConnected(false)
       console.error('Error fetching tags:', err)
     } finally {
       setLoading(false)
     }
+  }
+
+  const findResourcesMissingTags = (tags: TagInfo[], requiredTagsList: string[]): Set<string> => {
+    // Group tags by resource
+    const resourceTagMap = new Map<string, Set<string>>()
+    
+    tags.forEach(tag => {
+      const resourceKey = `${tag.subscriptionId}|${tag.resourceGroupName}|${tag.resourceName}|${tag.resourceType}`
+      if (!resourceTagMap.has(resourceKey)) {
+        resourceTagMap.set(resourceKey, new Set())
+      }
+      resourceTagMap.get(resourceKey)!.add(tag.key.toLowerCase())
+    })
+    
+    // Find resources missing any of the required tags
+    const missingSet = new Set<string>()
+    const requiredTagsLower = requiredTagsList.map(tag => tag.toLowerCase())
+    
+    resourceTagMap.forEach((existingTags, resourceKey) => {
+      const isMissingAnyRequiredTag = requiredTagsLower.some(requiredTag => !existingTags.has(requiredTag))
+      if (isMissingAnyRequiredTag) {
+        missingSet.add(resourceKey)
+      }
+    })
+    
+    return missingSet
   }
 
   const handleSearch = (tagKey: string, tagValue: string) => {
@@ -101,8 +161,9 @@ function App() {
     })
   }, [allTags, searchKey, searchValue, showOnlyNull, includeResourceGroups, includeResources, includeDev, includeTest, includeStaging, includeProd])
 
+  // Check connection on mount (but don't fetch tags automatically)
   useEffect(() => {
-    fetchAllTags()
+    checkConnection()
   }, [])
 
   return (
@@ -110,6 +171,7 @@ function App() {
       <header className="app-header">
         <h1>Azure Tag Analyzer</h1>
         <p>Analyze tags across your Azure subscriptions, resource groups, and resources</p>
+        <ConnectionStatus isConnected={isConnected} isChecking={isCheckingConnection} />
       </header>
       
       {error && (
@@ -119,7 +181,11 @@ function App() {
       )}
 
       <div className="content">
-        <TagSearch onSearch={handleSearch} loading={loading} />
+        <TagSearch 
+          onSearch={handleSearch} 
+          onFetchTags={fetchAllTags} 
+          loading={loading} 
+        />
         <TagFilters
           showOnlyNull={showOnlyNull}
           onShowOnlyNullChange={setShowOnlyNull}
@@ -136,7 +202,11 @@ function App() {
           includeProd={includeProd}
           onIncludeProdChange={setIncludeProd}
         />
-        <TagList tags={filteredTags} loading={loading} />
+        <TagList 
+          tags={filteredTags} 
+          loading={loading} 
+          highlightedResources={highlightedResources}
+        />
       </div>
     </div>
   )
