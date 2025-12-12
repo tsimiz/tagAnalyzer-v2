@@ -7,6 +7,12 @@ interface TagFiltersProps {
   onIncludeResourceGroupsChange: (value: boolean) => void;
   includeResources: boolean;
   onIncludeResourcesChange: (value: boolean) => void;
+  includeDev: boolean;
+  onIncludeDevChange: (value: boolean) => void;
+  includeTest: boolean;
+  onIncludeTestChange: (value: boolean) => void;
+  includeProd: boolean;
+  onIncludeProdChange: (value: boolean) => void;
 }
 
 const TagFilters: React.FC<TagFiltersProps> = ({
@@ -16,6 +22,12 @@ const TagFilters: React.FC<TagFiltersProps> = ({
   onIncludeResourceGroupsChange,
   includeResources,
   onIncludeResourcesChange,
+  includeDev,
+  onIncludeDevChange,
+  includeTest,
+  onIncludeTestChange,
+  includeProd,
+  onIncludeProdChange,
 }) => {
   return (
     <div className="tag-filters">
@@ -52,6 +64,40 @@ const TagFilters: React.FC<TagFiltersProps> = ({
                 onChange={(e) => onIncludeResourcesChange(e.target.checked)}
               />
               <span>Include Resources</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="filter-section">
+          <h4>Environment</h4>
+          <div className="filter-item">
+            <label>
+              <input
+                type="checkbox"
+                checked={includeDev}
+                onChange={(e) => onIncludeDevChange(e.target.checked)}
+              />
+              <span>Include Development (dev)</span>
+            </label>
+          </div>
+          <div className="filter-item">
+            <label>
+              <input
+                type="checkbox"
+                checked={includeTest}
+                onChange={(e) => onIncludeTestChange(e.target.checked)}
+              />
+              <span>Include Test</span>
+            </label>
+          </div>
+          <div className="filter-item">
+            <label>
+              <input
+                type="checkbox"
+                checked={includeProd}
+                onChange={(e) => onIncludeProdChange(e.target.checked)}
+              />
+              <span>Include Production (prod)</span>
             </label>
           </div>
         </div>
