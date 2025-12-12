@@ -72,6 +72,9 @@ const TagList: React.FC<TagListProps> = ({ tags, loading, highlightedResources, 
       'Subscription ID': tag.subscriptionId,
     }));
 
+    // Additional safety check
+    if (worksheetData.length === 0) return;
+
     // Create a new workbook and worksheet
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
@@ -88,8 +91,8 @@ const TagList: React.FC<TagListProps> = ({ tags, loading, highlightedResources, 
     });
     worksheet['!cols'] = columnWidths;
 
-    // Generate filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    // Generate filename with timestamp (remove milliseconds and timezone)
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace(/\.\d{3}Z$/, '');
     const filename = `azure-tags-export-${timestamp}.xlsx`;
 
     // Write the file
