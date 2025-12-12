@@ -17,6 +17,9 @@ const extractEnvironment = (text: string): string | null => {
   // Check for 'test' as a word boundary (not part of words like 'protest')
   if (/\btest\b/.test(lowerText) || /\btesting\b/.test(lowerText)) return 'test';
   
+  // Check for 'staging' or 'stg' as a word boundary
+  if (/\bstaging\b/.test(lowerText) || /\bstg\b/.test(lowerText)) return 'staging';
+  
   // Check for 'prod' as a word boundary (not part of words like 'product')
   if (/\bprod\b/.test(lowerText) || /\bproduction\b/.test(lowerText)) return 'prod';
   
@@ -36,6 +39,7 @@ function App() {
   const [includeResources, setIncludeResources] = useState(true)
   const [includeDev, setIncludeDev] = useState(true)
   const [includeTest, setIncludeTest] = useState(true)
+  const [includeStaging, setIncludeStaging] = useState(true)
   const [includeProd, setIncludeProd] = useState(true)
 
   const fetchAllTags = async () => {
@@ -80,21 +84,22 @@ function App() {
       const environment = extractEnvironment(tag.resourceGroupName) || extractEnvironment(tag.subscriptionName);
       
       // If all environments are selected or none are selected, show all
-      const allEnvironmentsSelected = includeDev && includeTest && includeProd;
-      const noEnvironmentsSelected = !includeDev && !includeTest && !includeProd;
+      const allEnvironmentsSelected = includeDev && includeTest && includeStaging && includeProd;
+      const noEnvironmentsSelected = !includeDev && !includeTest && !includeStaging && !includeProd;
       
       const matchesEnvironment = 
         allEnvironmentsSelected || 
         noEnvironmentsSelected ||
         (environment === 'dev' && includeDev) ||
         (environment === 'test' && includeTest) ||
+        (environment === 'staging' && includeStaging) ||
         (environment === 'prod' && includeProd) ||
         // Show resources with no detected environment when all are selected or none selected
         (environment === null && (allEnvironmentsSelected || noEnvironmentsSelected));
       
       return matchesKey && matchesValue && matchesNullFilter && matchesResourceType && matchesEnvironment
     })
-  }, [allTags, searchKey, searchValue, showOnlyNull, includeResourceGroups, includeResources, includeDev, includeTest, includeProd])
+  }, [allTags, searchKey, searchValue, showOnlyNull, includeResourceGroups, includeResources, includeDev, includeTest, includeStaging, includeProd])
 
   useEffect(() => {
     fetchAllTags()
@@ -126,6 +131,8 @@ function App() {
           onIncludeDevChange={setIncludeDev}
           includeTest={includeTest}
           onIncludeTestChange={setIncludeTest}
+          includeStaging={includeStaging}
+          onIncludeStagingChange={setIncludeStaging}
           includeProd={includeProd}
           onIncludeProdChange={setIncludeProd}
         />
